@@ -1,0 +1,5 @@
+alpha beta value
+9\t0\t764
+f\tc\t71
+f\tc\t494
+8\te\t281
