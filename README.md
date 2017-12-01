@@ -24,14 +24,16 @@ A program that displays a ROLLUP summary of a table
 
 * Download and install JDK 8 for Linux here: `http://www.oracle.com/technetwork/java/javase/downloads/jdk8-downloads-2133151.html`
 * `cd` to the `Rollup_Summary` directory
-* `javac *.java`
-* `java Rollup_Summary y m d < input_file`
-  * E.g. Use `test_data/1_example.txt` as `input_file`, or any other input file in the `test_data` directory
-  
+* `mkdir bin` (if a `bin` directory doesn't already exist)
+* `javac src/*/*.java -d bin`
+* `cd bin`
+* `java main.Rollup_Summary y m d < input_file`
+  * E.g. Use `../../test_data/1_example.txt` as `input_file`, or any other input file in the `test_data` directory
+
 ## Testing the Program
 
 * See the `test_data` directory for a set of test input files, and the corresponding expected output (if applicable)
-* Create additional test cases by providing different column name arguments when running the program
+* Create additional test cases by providing different column name argument combinations when running the program
 
 ## Next Steps
 
