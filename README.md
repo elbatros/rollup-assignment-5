@@ -1,20 +1,24 @@
 # Rollup Summary
 
-A program that dislays a ROLLUP summary of a table
+A program that displays a ROLLUP summary of a table
 
 ## Overview
 
 * Parses standard input into a table
   * The first input line must consist of space-delimited column names
+    * Column names must be unique
+    * Column names are case-sensitive
+    * The last column is the 'value' column, but can be given any name
   * Each subsequent input line defines a row
     * Values must be tab-delimited
     * The last value must be a number
     * The other values can be any string
-* Accepts space-delimited column name arguments that define how columns will be grouped for aggregation
-  * Column names must be a subset of the table's column names
+* Program arguments (space-delimited) are column names (in order) that define how columns will be grouped for aggregation
+  * Must be a subset of the table's column names
+  * Can be in any order
   * Cannot include the name of the last (value) column
   * Cannot include duplicates
-* Computes and prints a ROLLUP summary view of the table to standard output
+* Computes a ROLLUP summary view of the table and prints it to standard output
 
 ## Running the Program
 
@@ -22,13 +26,13 @@ A program that dislays a ROLLUP summary of a table
 * `cd` to the `Rollup_Summary` directory
 * `javac *.java`
 * `java Rollup_Summary y m d < input_file`
-  * See the `test_data` directory for several example input files that can be used
+  * E.g. Use `test_data/1_example.txt` as `input_file`, or any other input file in the `test_data` directory
   
 ## Testing the Program
 
-* See the `test_data` directory for many test input files, and the corresponding expected output (if applicable)
-* Be sure to provide different column name arguments to create additional test cases
+* See the `test_data` directory for a set of test input files, and the corresponding expected output (if applicable)
+* Create additional test cases by providing different column name arguments when running the program
 
 ## Next Steps
 
-* Implement a suite of JUnit tests that use the test files in the `test_data` directory to test the program automatically
+* Implement a suite of JUnit tests that uses the files in the `test_data` directory to test the program automatically
