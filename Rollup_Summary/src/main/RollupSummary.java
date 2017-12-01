@@ -1,11 +1,17 @@
 package main;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Scanner;
+import core.Row;
+import core.RowComparator;
+
 
 public class RollupSummary {
+    
+    private static final String COLUMN_DELIMITER = "\t";
     
     private static final String VALUE_COLUMN_NAME = "value";
     
@@ -73,6 +79,7 @@ public class RollupSummary {
     }
     
     
+    // POSTCONDITIONS: 
     private static final ArrayList<String> readInputData()
     {
         System.out.println();
@@ -98,24 +105,17 @@ public class RollupSummary {
         catch (Throwable t)
         {
             throw new RuntimeException(
-                "An error occurred while reading input data.  Exiting...",
+                "An error occurred while reading the input data.  Exiting...",
                 t);
         }
         
-        return lines;
-    }
-    
-    
-    private static final void printInputData(ArrayList<String> inputDataLines)
-    {
-        System.out.println();
-        System.out.println("Input Data:");
-        System.out.println();
-        
-        for (int i = 0; i < inputDataLines.size(); i++)
+        if (lines.size() < 2)
         {
-            System.out.println(inputDataLines.get(i));
+            throw new RuntimeException(
+                "The input data must contain at least two lines.  Exiting...");
         }
+        
+        return lines;
     }
     
     
@@ -189,7 +189,7 @@ public class RollupSummary {
     
     
     // PRECONDITIONS: 
-    private static final int[] getColumnIndicesSortedForGrouping(
+    private static final int[] getGroupingColumnIndices(
         String[] columnNames, 
         String[] groupingColumnNames)
     {
@@ -199,14 +199,14 @@ public class RollupSummary {
         {
             // Sort by all dimensional columns, in the order that they appear
             
-            int[] columnIndices = new int[numDimensionalColumns];
+            int[] groupingColumnIndices = new int[numDimensionalColumns];
             
-            for (int i = 0; i < columnIndices.length; i++)
+            for (int i = 0; i < numDimensionalColumns; i++)
             {
-                columnIndices[i] = i;
+                groupingColumnIndices[i] = i;
             }
             
-            return columnIndices;
+            return groupingColumnIndices;
         }
         
         HashMap<String, Integer> columnName_Index_Map = 
@@ -217,15 +217,16 @@ public class RollupSummary {
             columnName_Index_Map.put(columnNames[i], i);
         }
         
-        int[] columnIndices = new int[groupingColumnNames.length];
+        int[] groupingColumnIndices = new int[groupingColumnNames.length];
         
         for (int i = 0; i < groupingColumnNames.length; i++)
         {
             String groupingColumnName = groupingColumnNames[i];
             
-            Integer columnIndex = columnName_Index_Map.get(groupingColumnName);
+            Integer groupingColumnIndex = 
+                columnName_Index_Map.get(groupingColumnName);
             
-            if (columnIndex == null)
+            if (groupingColumnIndex == null)
             {
                 throw new RuntimeException(
                     "Grouping column name " + 
@@ -233,10 +234,241 @@ public class RollupSummary {
                     " does not match any dimensional column in the input data");
             }
             
-            columnIndices[i] = columnIndex;
+            groupingColumnIndices[i] = groupingColumnIndex;
         }
         
-        return columnIndices;
+        return groupingColumnIndices;
+    }
+    
+    
+    // PRECONDITIONS:
+    // POSTCONDITIONS:
+    private static final Row[] getRows(
+        ArrayList<String> inputDataLines,
+        int expectedNumColumns)
+    {
+        int numInputDataLines = inputDataLines.size();
+        
+        ArrayList<Row> rows = new ArrayList<Row>(numInputDataLines);
+        
+        for (int i = 0; i < numInputDataLines; i++)
+        {
+            String line = inputDataLines.get(i);
+            
+            String[] values = line.split(COLUMN_DELIMITER);
+            
+            if (values.length != expectedNumColumns)
+            {
+                throw new RuntimeException(
+                    "Input data invalid: Row " +
+                    i +
+                    " does not contain " +
+                    expectedNumColumns +
+                    " columns");
+            }
+            
+            double value;
+            
+            try
+            {
+                value = Double.parseDouble(values[values.length - 1]);
+            }
+            
+            catch (NumberFormatException e)
+            {
+                throw new RuntimeException(
+                    "Input data invalid: The value in the value column of row " +
+                    i +
+                    " cannot be parsed to a number (double)",
+                    e);
+            }
+            
+            String[] dimensionalColumnValues =
+                Arrays.copyOf(values, values.length - 1);
+            
+            Row row = new Row(dimensionalColumnValues, value);
+            
+            rows.add(row);
+        }
+        
+        return rows.toArray(new Row[rows.size()]);
+    }
+    
+    
+    // PRECONDITIONS:
+    private static final Row[] sortRows(
+        Row[] rows,
+        int[] columnIndicesSortedForGrouping)
+    {
+        RowComparator rowComparator = 
+            new RowComparator(columnIndicesSortedForGrouping);
+        
+        Row[] rowsSorted = Arrays.copyOf(rows, rows.length);
+        
+        Arrays.sort(rowsSorted, rowComparator);
+        
+        return rowsSorted;
+    }
+    
+    
+    private static final void printRollupSummaryColumnNames(
+        String[] groupingColumnNames, 
+        String valueColumnName)
+    {
+        int numGroupingColumns = groupingColumnNames.length;
+        
+        StringBuilder stringBuilder = 
+            new StringBuilder((numGroupingColumns + 1) * 20);
+        
+        for (int i = 0; i < numGroupingColumns; i++)
+        {
+            stringBuilder.append(groupingColumnNames[i]);
+            stringBuilder.append(" ");
+        }
+        
+        stringBuilder.append(valueColumnName);
+        
+        System.out.println(stringBuilder.toString());
+    }
+    
+    
+    // PRECONDITIONS:
+    private static final void printRollupSummary(
+        Row[] rowsSorted,
+        int[] groupingColumnIndices)
+    {      
+        Row previousRow = rowsSorted[0];
+        
+        int numGroupingColumns = groupingColumnIndices.length;
+        
+        double[] groupSums = new double[numGroupingColumns];
+        Arrays.fill(groupSums, previousRow.getValue());
+        
+        double total = previousRow.getValue();
+        
+        // For each sorted row, not including the first
+        for (int rowIndex = 1; rowIndex < rowsSorted.length; rowIndex++)
+        {
+            Row currentRow = rowsSorted[rowIndex];
+            double currentRowValue = currentRow.getValue();
+            
+            total += currentRowValue;
+            
+            // For each grouping column
+            for (int groupingColumnIndex = 0; 
+                 groupingColumnIndex < numGroupingColumns; 
+                 groupingColumnIndex++)
+            {
+                int columnIndex = groupingColumnIndices[groupingColumnIndex];
+                
+                String previousColumnValue = 
+                    previousRow.getDimensionalColumnValue(columnIndex);
+                
+                String currentColumnValue = 
+                    currentRow.getDimensionalColumnValue(columnIndex);
+                
+                /* If grouping column values up to and including the current
+                 * grouping column have not changed from the previous row  */
+                if (currentColumnValue.equals(previousColumnValue))
+                {
+                    // Increment the sum for this group
+                    groupSums[groupingColumnIndex] = 
+                        groupSums[groupingColumnIndex] + currentRowValue;
+                }
+                
+                /* If the value of the current grouping column has changed from 
+                 * the previous row  */
+                else
+                {
+                    // Summarize the group(s) that ended on the previous row
+                    summarizeGroups(
+                        previousRow,
+                        groupingColumnIndices, 
+                        groupingColumnIndex, 
+                        groupSums);
+                    
+                    /* Reset the sum for the current grouping column and all
+                     * subsequent grouping columns, and add the value of the
+                     * current row  */
+                    for (int i = groupingColumnIndex; 
+                         i < numGroupingColumns; 
+                         i++)
+                    {
+                        groupSums[i] = currentRowValue;
+                    }
+                    
+                    break;
+                }
+            }
+            
+            previousRow = currentRow;
+        }
+        
+        // Summarize the group(s) that ended on the last row
+        summarizeGroups(
+            previousRow,
+            groupingColumnIndices, 
+            0, 
+            groupSums);
+        
+        // Print the total value
+        
+        StringBuilder stringBuilder = 
+            new StringBuilder(numGroupingColumns + 100);
+        
+        for (int i = 0; i < numGroupingColumns; i++)
+        {
+            stringBuilder.append('\t');
+        }
+        
+        stringBuilder.append(total);
+        
+        System.out.println(stringBuilder.toString());
+    }
+    
+    
+    public static final void summarizeGroups(
+        Row row,
+        int[] groupingColumnIndices, 
+        int valueChangedIndex, 
+        double[] groupSums)
+    {
+        int numGroupingColumns = groupingColumnIndices.length;
+        
+        // row's grouping column values, in grouping order
+        String[] groupingColumnValues = new String[numGroupingColumns];
+        
+        for (int i = 0; i < numGroupingColumns; i++)
+        {
+            groupingColumnValues[i] =
+                row.getDimensionalColumnValue(groupingColumnIndices[i]);
+        }
+        
+        // For each group that just ended (from largest to smallest)
+        for (int i = numGroupingColumns - 1; i >= valueChangedIndex; i--)
+        {
+            StringBuilder stringBuilder = new StringBuilder();
+            
+            for (int j = 0; j <= i; j++)
+            {
+                stringBuilder.append(groupingColumnValues[j]);
+                stringBuilder.append('\t');
+            }
+            
+            // Add tab characters for aggregated grouping columns
+            for (int j = i + 1; 
+                 j < numGroupingColumns; 
+                 j++)
+            {
+                stringBuilder.append('\t');
+            }
+            
+            // Add the group sum (aggregated value)
+            stringBuilder.append(groupSums[i]);
+            
+            // Print the group summary
+            System.out.println(stringBuilder.toString());
+        }
     }
     
     
@@ -248,24 +480,20 @@ public class RollupSummary {
         validateGroupingColumnNames(groupingColumnNames);
         
         ArrayList<String> inputDataLines = readInputData();
-        
-        if (inputDataLines.isEmpty())
-        {
-            throw new RuntimeException(
-                "No input data was provided via standard input.  Exiting...");
-        }
-        
-        // TODO: Remove
-        printInputData(inputDataLines);
 
-        String columnNamesLine = inputDataLines.get(0);
+        String columnNamesLine = inputDataLines.remove(0);
         String[] columnNames = getAndValidateColumnNames(columnNamesLine);
         
-        int[] columnIndicesSorted = 
-            getColumnIndicesSortedForGrouping(columnNames, groupingColumnNames);
+        int[] groupingColumnIndices = 
+            getGroupingColumnIndices(columnNames, groupingColumnNames);
         
-        int numDimensionalColumns = columnNames.length - 1;
+        Row[] rows = getRows(inputDataLines, columnNames.length);
+        Row[] rowsSorted = sortRows(rows, groupingColumnIndices);
         
-        // TODO
+        printRollupSummaryColumnNames(groupingColumnNames, VALUE_COLUMN_NAME);
+        
+        printRollupSummary(
+            rowsSorted,
+            groupingColumnIndices);
     }
 }
