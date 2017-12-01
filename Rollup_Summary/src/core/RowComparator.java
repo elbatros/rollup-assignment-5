@@ -2,23 +2,38 @@ package core;
 
 import java.util.Comparator;
 
+
+/**
+ * Compares {@link Row}s by comparing dimensional column values 
+ * (lexicographically) using the provided column ordering 
+ * 
+ * @author Dylan Jacobs
+ */
 public class RowComparator implements Comparator<Row>
 {
-    private final int[] dimensionalColumnIndicesSorted;
+    /**
+     * The column indices to use for comparison, in comparison order
+     */
+    private final int[] columnIndicesToCompare;
     
     
-    public RowComparator(int[] dimensionalColumnIndicesSorted)
+    /**
+     * Create a new {@link RowComparator}
+     * 
+     * @param columnIndicesToCompare {@link #columnIndicesToCompare}
+     */
+    public RowComparator(int[] columnIndicesToCompare)
     {
-        this.dimensionalColumnIndicesSorted = dimensionalColumnIndicesSorted;
+        this.columnIndicesToCompare = columnIndicesToCompare;
     }
     
     
     @Override
     public int compare(Row row1, Row row2)
     {
-        for (int i = 0; i < dimensionalColumnIndicesSorted.length; i++)
+        for (int i = 0; i < columnIndicesToCompare.length; i++)
         {
-            int columnIndex = dimensionalColumnIndicesSorted[i];
+            int columnIndex = columnIndicesToCompare[i];
             
             String row1ColumnValue = row1.getDimensionalColumnValue(columnIndex);
             String row2ColumnValue = row2.getDimensionalColumnValue(columnIndex);
