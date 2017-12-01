@@ -248,8 +248,7 @@ public class RollupSummarizer
                 throw new RuntimeException(
                     "Input data invalid: The value in the value column of row " +
                     i +
-                    " cannot be parsed to a number (double)",
-                    e);
+                    " cannot be parsed to a number (double)");
             }
             
             String[] dimensionalColumnValues =
@@ -464,7 +463,7 @@ public class RollupSummarizer
         
         stringBuilder.append(groupSummary);
         
-        // Append the total value line
+        // Construct and append the total value line
         
         for (int i = 0; i < numGroupingColumns; i++)
         {
